@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LabelForge — Leather Goods</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#f5f2ee; --surf:#ffffff; --surf2:#f0ece6; --surf3:#e8e2da;
+  --border:#d8d0c4; --border2:#c0b5a5;
+  --gold:#8a6a2a; --goldL:#6a4e18; --goldD:#a07830;
+  --text:#1c1810; --textD:#5a4e3e; --textM:#9a8e7e;
+  --amber:#b06820; --green:#2e7a3e; --red:#b03020; --blue:#2a5a9a;
+}
+body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; font-size:13px; min-height:100vh; }
+
+#header { background:var(--surf); border-bottom:1px solid var(--border); padding:0 32px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+.logo { font-size:18px; font-weight:700; letter-spacing:0.08em; color:var(--gold); display:flex; align-items:center; gap:12px; }
+.logo-badge { background:var(--amber); color:#fff; font-size:9px; padding:2px 8px; letter-spacing:0.2em; font-weight:700; }
+#conn-status { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--textD); }
+#status-dot { width:7px; height:7px; border-radius:50%; background:#ccc; transition:background 0.3s; }
+
+#connected-bar { background:#edf7ee; border-bottom:1px solid #b8ddb8; padding:8px 32px; display:flex; justify-content:space-between; align-items:center; }
+#connected-bar.hidden { display:none; }
+.conn-text { font-size:10px; color:var(--green); letter-spacing:0.15em; font-weight:700; }
+#btn-refresh { background:none; border:1px solid #b8ddb8; color:var(--green); font-family:inherit; font-size:10px; padding:4px 14px; cursor:pointer; letter-spacing:0.1em; font-weight:700; transition:all 0.15s; }
+#btn-refresh:hover { background:#d8f0d8; }
+#btn-refresh:disabled { opacity:0.5; cursor:not-allowed; }
+#btn-disconnect { background:none; border:1px solid var(--border); color:var(--textD); font-family:inherit; font-size:10px; padding:4px 12px; cursor:pointer; letter-spacing:0.1em; }
+
+#main { max-width:960px; margin:0 auto; padding:36px 32px 80px; }
+.section-label { font-size:10px; letter-spacing:0.22em; color:var(--textD); margin-bottom:10px; text-transform:uppercase; }
+
+#search-wrap { position:relative; margin-bottom:28px; }
+#search-input { width:100%; background:var(--surf); border:2px solid var(--border2); color:var(--text); font-family:inherit; font-size:20px; padding:16px 20px; outline:none; transition:border 0.2s; }
+#search-input:focus { border-color:var(--gold); }
+#search-input::placeholder { color:var(--textM); font-style:italic; }
+#search-input:disabled { opacity:0.4; cursor:not-allowed; }
+
+#dropdown { position:absolute; top:100%; left:0; right:0; background:var(--surf); border:1px solid var(--border2); border-top:none; z-index:50; max-height:300px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+#dropdown.hidden { display:none; }
+.drop-item { padding:12px 20px; border-bottom:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:background 0.1s; }
+.drop-item:hover { background:var(--surf3); }
+.drop-item:last-child { border-bottom:none; }
+.di-name { font-size:15px; color:var(--text); margin-bottom:3px; }
+.di-meta { font-size:10px; color:var(--textD); }
+.di-sku { background:var(--surf3); color:var(--gold); font-size:10px; padding:3px 10px; border:1px solid var(--border); letter-spacing:0.08em; }
+.drop-empty { padding:16px 20px; color:var(--textD); font-style:italic; font-size:13px; }
+
+#product-card { background:var(--surf); border:1px solid var(--border2); border-left:4px solid var(--gold); padding:22px 26px; margin-bottom:28px; animation:fadeIn 0.2s ease; }
+#product-card.hidden { display:none; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+.card-name { font-size:19px; font-weight:700; margin-bottom:4px; }
+.card-sku  { font-size:11px; color:var(--gold); letter-spacing:0.12em; margin-bottom:16px; }
+.card-static { display:flex; gap:24px; flex-wrap:wrap; margin-bottom:18px; }
+.cf-label { font-size:9px; letter-spacing:0.2em; color:var(--textM); text-transform:uppercase; margin-bottom:4px; }
+.cf-value { font-size:14px; color:var(--textD); }
+.edit-section { border-top:1px solid var(--border); padding-top:16px; margin-bottom:18px; }
+.edit-section-label { font-size:9px; letter-spacing:0.2em; color:var(--amber); text-transform:uppercase; margin-bottom:12px; }
+.edit-fields { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
+.edit-field-label { font-size:9px; letter-spacing:0.2em; color:var(--textM); text-transform:uppercase; margin-bottom:5px; }
+.edit-input-gold { width:130px; background:#fffdf8; border:1px solid var(--gold); color:var(--goldL); font-family:inherit; font-size:15px; padding:8px 12px; outline:none; font-weight:700; }
+.edit-input { width:130px; background:var(--surf2); border:1px solid var(--border2); color:var(--text); font-family:inherit; font-size:14px; padding:8px 12px; outline:none; }
+#btn-save-sheet { background:var(--blue); color:#fff; border:none; padding:9px 18px; font-family:inherit; font-size:10px; letter-spacing:0.15em; font-weight:700; cursor:pointer; height:38px; align-self:flex-end; text-transform:uppercase; }
+#btn-save-sheet:disabled { opacity:0.6; cursor:not-allowed; }
+
+.qty-row { display:flex; align-items:center; gap:14px; border-top:1px solid var(--border); padding-top:16px; }
+.qty-label { font-size:10px; letter-spacing:0.18em; color:var(--textD); text-transform:uppercase; }
+.qty-ctrl { display:flex; border:1px solid var(--border2); background:var(--surf2); }
+.qty-btn { width:36px; height:36px; border:none; background:none; color:var(--text); font-size:18px; cursor:pointer; font-family:inherit; }
+.qty-btn:hover { background:var(--surf3); }
+#qty-input { width:56px; text-align:center; border:none; border-left:1px solid var(--border); border-right:1px solid var(--border); background:#fff; font-family:inherit; font-size:15px; font-weight:700; color:#111; outline:none; padding:6px 0; }
+#btn-add { background:var(--text); color:#fff; border:1px solid var(--text); padding:10px 28px; font-family:inherit; font-size:11px; letter-spacing:0.18em; font-weight:700; cursor:pointer; text-transform:uppercase; }
+#btn-add:hover { background:var(--amber); border-color:var(--amber); }
+
+#output-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; margin-top:8px; }
+.output-title { font-size:15px; font-weight:700; display:flex; align-items:center; gap:12px; }
+#row-count { background:var(--surf2); border:1px solid var(--border); color:var(--textD); font-size:10px; padding:3px 10px; letter-spacing:0.1em; }
+.output-actions { display:flex; gap:10px; }
+#btn-clear-all { background:none; border:1px solid var(--border); color:var(--textD); font-family:inherit; font-size:10px; padding:8px 14px; cursor:pointer; letter-spacing:0.1em; }
+#btn-clear-all:hover { border-color:var(--red); color:var(--red); }
+#btn-export { background:var(--green); color:#fff; border:none; padding:8px 22px; font-family:inherit; font-size:11px; letter-spacing:0.15em; font-weight:700; cursor:pointer; text-transform:uppercase; }
+#btn-export:disabled { opacity:0.4; cursor:not-allowed; background:#aaa; }
+#btn-write-sheet { background:var(--blue); color:#fff; border:none; padding:8px 22px; font-family:inherit; font-size:11px; letter-spacing:0.15em; font-weight:700; cursor:pointer; text-transform:uppercase; }
+#btn-write-sheet:disabled { opacity:0.4; cursor:not-allowed; background:#aaa; }
+
+#empty-state { background:var(--surf); border:1px solid var(--border); padding:60px 20px; text-align:center; color:var(--textM); }
+.empty-icon { font-size:40px; margin-bottom:12px; opacity:0.3; }
+.empty-text { font-size:13px; font-style:italic; letter-spacing:0.08em; }
+#table-wrap { border:1px solid var(--border); overflow-x:auto; }
+#table-wrap.hidden { display:none; }
+table { width:100%; border-collapse:collapse; }
+thead th { background:var(--surf2); padding:10px 14px; text-align:left; font-size:9px; letter-spacing:0.2em; color:var(--textD); font-weight:600; border-bottom:1px solid var(--border); white-space:nowrap; }
+tbody tr { border-bottom:1px solid var(--border); background:var(--surf); transition:background 0.1s; }
+tbody tr:hover { background:var(--surf2); }
+tbody tr:last-child { border-bottom:none; }
+tbody td { padding:9px 14px; font-size:12px; vertical-align:middle; }
+.td-num { color:var(--textM); font-size:11px; }
+.td-name { color:var(--text); font-size:13px; font-weight:600; }
+.td-sku { color:var(--amber); font-size:11px; }
+.td-val { color:var(--textD); }
+.td-price { color:var(--green); font-weight:700; }
+
+/* inline qty editor in table */
+.qty-edit-wrap { display:flex; align-items:center; gap:4px; }
+.qty-edit-btn { width:24px; height:24px; border:1px solid var(--border2); background:var(--surf2); color:var(--text); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; padding:0; font-family:inherit; }
+.qty-edit-btn:hover { background:var(--surf3); }
+.qty-edit-input { width:44px; text-align:center; border:1px solid var(--border2); background:#fff; font-family:inherit; font-size:13px; font-weight:700; color:var(--text); outline:none; padding:3px 0; }
+
+.qty-badge { display:inline-block; background:#f0e8d8; color:var(--amber); font-size:12px; padding:3px 10px; border:1px solid #e0d0b0; font-weight:700; border-radius:2px; }
+.btn-del { background:none; border:none; color:var(--textM); cursor:pointer; font-size:14px; padding:2px 6px; transition:color 0.15s; }
+.btn-del:hover { color:var(--red); }
+
+#toast { position:fixed; bottom:28px; right:28px; background:#fff; border:1px solid var(--border); padding:11px 20px; font-size:11px; letter-spacing:0.15em; font-weight:700; z-index:9999; box-shadow:0 4px 20px rgba(0,0,0,0.12); opacity:0; transform:translateY(8px); transition:all 0.25s; pointer-events:none; border-left:3px solid var(--green); color:var(--green); }
+#toast.show { opacity:1; transform:translateY(0); }
+#toast.err  { border-color:var(--red); color:var(--red); }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="logo">LABELFORGE <span class="logo-badge">LEATHER GOODS</span></div>
+  <div id="conn-status"><div id="status-dot"></div><span id="status-text">Connecting…</span></div>
+</div>
+
+<div id="connected-bar" class="hidden">
+  <span class="conn-text" id="conn-text">✓ CONNECTED</span>
+  <div style="display:flex;gap:10px;">
+    <button id="btn-refresh" onclick="refreshSheet()">⟳ REFRESH DATA</button>
+    <button id="btn-disconnect" onclick="disconnect()">DISCONNECT</button>
+  </div>
+</div>
+
+<div id="main">
+  <div class="section-label">Search Product by Name or SKU</div>
+  <div id="search-wrap">
+    <input id="search-input" type="text" placeholder="Loading data…" disabled
+      oninput="onSearch(this.value)" onkeydown="if(event.key==='Escape')closeDropdown()" autocomplete="off"/>
+    <div id="dropdown" class="hidden"></div>
+  </div>
+
+  <div id="product-card" class="hidden">
+    <div class="card-name" id="c-name"></div>
+    <div class="card-sku"  id="c-sku"></div>
+    <div class="card-static">
+      <div><div class="cf-label">Color</div><div class="cf-value" id="c-color"></div></div>
+      <div><div class="cf-label">Size</div><div class="cf-value" id="c-size"></div></div>
+    </div>
+    <div class="edit-section">
+      <div class="edit-section-label">Editable Fields — Save to Google Sheet</div>
+      <div class="edit-fields">
+        <div><div class="edit-field-label">MRP</div><input class="edit-input-gold" id="e-mrp" type="text"/></div>
+        <div><div class="edit-field-label">Selling Price</div><input class="edit-input-gold" id="e-price" type="text"/></div>
+        <div><div class="edit-field-label">Date of Manufacture</div><input class="edit-input" id="e-dom" type="text"/></div>
+        <button id="btn-save-sheet" onclick="saveToSheet()">SAVE TO SHEET</button>
+      </div>
+    </div>
+    <div class="qty-row">
+      <span class="qty-label">Quantity</span>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="changeQty(-1)">−</button>
+        <input id="qty-input" type="number" value="1" min="1"/>
+        <button class="qty-btn" onclick="changeQty(1)">+</button>
+      </div>
+      <button id="btn-add" onclick="addToList()">+ ADD TO LIST</button>
+    </div>
+  </div>
+
+  <div id="output-header">
+    <div class="output-title">Label Export List <span id="row-count">0 ITEMS</span></div>
+    <div class="output-actions">
+      <button id="btn-clear-all" onclick="clearAll()">CLEAR ALL</button>
+      <button id="btn-write-sheet" onclick="writeToSheet()" disabled>⇪ WRITE TO SHEET</button>
+      <button id="btn-export" onclick="exportCSV()" disabled>↓ EXPORT CSV</button>
+    </div>
+  </div>
+
+  <div id="empty-state"><div class="empty-icon">◫</div><div class="empty-text">Search and add products above to build your label list</div></div>
+  <div id="table-wrap" class="hidden">
+    <table>
+      <thead><tr><th>#</th><th>Item Name</th><th>SKU</th><th>Colour</th><th>Size</th><th>Quantity</th><th>MRP</th><th>Price</th><th>Date of Mfg</th><th></th></tr></thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── HARDCODED SCRIPT URLS ──
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzctu4FMjyKpwxqpbiIujd9SG9D1FYyVmhK_0A9sGwEqKGepO-yZfYDdX9nc7_K41u6pw/exec';
+const EXPORT_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwxwxqjM8K6IfADCIgMasPvnFb8SA9u_x8JLL7QsUCkDpLYuoanLuyIwvp_Cngs4eDAuA/exec';
+
+let db=[], selected=null, labelRows=[], _uid=0, searchTimer=null, _headers=[];
+const uid=()=>++_uid;
+
+function currentDOM(){
+  const d=new Date();
+  // Prefix with apostrophe so Excel treats it as text, not a date
+  return d.toLocaleString('en-US',{month:'short'}).toUpperCase()+' '+d.getFullYear();
+}
+
+// ── ITEM NAME PARSER ──
+function parseItemName(raw){
+  if(!raw) return {displayName:'',color:'',size:''};
+  const parts=raw.split('-').map(s=>s.trim());
+  if(parts.length===1) return {displayName:parts[0],color:'',size:''};
+  if(parts.length===2) return {displayName:parts[0],color:parts[1],size:''};
+  const last=parts[parts.length-1];
+  const looksLikeSize=/^(\d{1,3}|XS|S|M|L|XL|XXL|XXXL|FREE)$/i.test(last);
+  if(looksLikeSize){
+    return {displayName:parts[0], color:parts.slice(1,parts.length-1).join('-'), size:last};
+  } else {
+    return {displayName:parts[0], color:parts.slice(1).join('-'), size:''};
+  }
+}
+
+// ── CLEAN NUMBER — strips INR, currency symbols, commas, trailing .00 ──
+function cleanNumber(val){
+  if(!val) return '';
+  return String(val)
+    .replace(/INR/gi,'')       // remove "INR" text
+    .replace(/[₹$€£¥]/g,'')   // remove currency symbols
+    .replace(/,/g,'')           // remove thousand separators
+    .trim()
+    .replace(/\.0+$/,'');       // remove trailing .00 or .000
+}
+
+// ── BUILD PRODUCT FROM JSON ROW ──
+function buildProduct(row, sheetRow){
+  const find=(...kws)=>{for(const kw of kws){const i=_headers.findIndex(h=>h.includes(kw));if(i!==-1)return i;}return -1;};
+  const COL={name:find('item_name','product_name','name','product'),sku:find('sku','item_code','code','barcode'),price:find('price','selling','sale_price'),mrp:find('mrp','maximum','retail_price'),dom:find('date_of_manufacture','dom','manufacture','mfg')};
+  const get=(col)=>col!==-1?(String(row[col]||'')).trim():'';
+  const rawName=get(COL.name);
+  const {displayName,color,size}=parseItemName(rawName);
+  return{_sheetRow:sheetRow,rawName,name:displayName,color,size,sku:get(COL.sku),price:cleanNumber(get(COL.price)),mrp:cleanNumber(get(COL.mrp)),dom:get(COL.dom)};
+}
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show'+(type==='err'?' err':'');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── STATUS ──
+function setStatus(state,msg){
+  document.getElementById('status-dot').style.background=state==='ok'?'#5a9860':state==='loading'?'#c07830':state==='err'?'#b04030':'#ccc';
+  document.getElementById('status-text').textContent=msg;
+}
+
+// ── JSONP — cache-busting timestamp prevents stale responses ──
+function jsonpCall(url,params,timeoutMs=15000){
+  return new Promise((resolve,reject)=>{
+    const cbName='__lf_'+Date.now()+'_'+Math.floor(Math.random()*9999);
+    const qs=new URLSearchParams({...params, callback:cbName, _t:Date.now()});
+    const script=document.createElement('script');
+    let done=false;
+    const timer=setTimeout(()=>{if(done)return;done=true;cleanup();reject(new Error('Request timed out — check your Apps Script deployment'));},timeoutMs);
+    window[cbName]=(data)=>{if(done)return;done=true;cleanup();resolve(data);};
+    function cleanup(){clearTimeout(timer);delete window[cbName];if(script.parentNode)script.parentNode.removeChild(script);}
+    script.onerror=()=>{if(done)return;done=true;cleanup();reject(new Error('Failed to reach Apps Script'));};
+    script.src=url+'?'+qs.toString();
+    document.head.appendChild(script);
+  });
+}
+
+// ── LOAD DATA ──
+function onDataLoaded(products){
+  if(!products.length) throw new Error('No products found in sheet');
+  db=products;
+  document.getElementById('connected-bar').classList.remove('hidden');
+  document.getElementById('conn-text').textContent=`✓ ${db.length} PRODUCTS LOADED`;
+  document.getElementById('search-input').disabled=false;
+  document.getElementById('search-input').placeholder='Type product name or SKU…';
+  setStatus('ok',`${db.length} products`);
+}
+
+async function loadSheet(){
+  setStatus('loading','Connecting…');
+  try{
+    const data=await jsonpCall(SCRIPT_URL,{action:'read'});
+    if(data.error) throw new Error(data.error);
+    _headers=data.headers.map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,'_'));
+    const products=data.rows.map((row,i)=>buildProduct(row,i+2)).filter(p=>p.rawName||p.sku);
+    onDataLoaded(products);
+  }catch(e){
+    setStatus('err','Connection failed');
+    document.getElementById('search-input').placeholder='Connection failed — try refreshing';
+    showToast(e.message,'err');
+  }
+}
+
+async function refreshSheet(){
+  const btn=document.getElementById('btn-refresh');
+  btn.disabled=true; btn.textContent='⟳ REFRESHING…';
+  try{
+    const data=await jsonpCall(SCRIPT_URL,{action:'read'});
+    if(data.error) throw new Error(data.error);
+    _headers=data.headers.map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,'_'));
+    const products=data.rows.map((row,i)=>buildProduct(row,i+2)).filter(p=>p.rawName||p.sku);
+    if(!products.length) throw new Error('No products found');
+    db=products;
+    document.getElementById('conn-text').textContent=`✓ ${db.length} PRODUCTS LOADED`;
+    setStatus('ok',`${db.length} products`);
+    showToast(`✓ Refreshed — ${db.length} products`);
+  }catch(e){ showToast(e.message,'err'); }
+  btn.disabled=false; btn.textContent='⟳ REFRESH DATA';
+}
+
+async function saveToSheet(){
+  if(!selected) return;
+  const btn=document.getElementById('btn-save-sheet');
+  const price=document.getElementById('e-price').value;
+  const mrp=document.getElementById('e-mrp').value;
+  btn.disabled=true; btn.textContent='SAVING…';
+  try{
+    const data=await jsonpCall(SCRIPT_URL,{action:'update',row:selected._sheetRow,price,mrp});
+    if(data.error) throw new Error(data.error);
+    db=db.map(p=>p._sheetRow===selected._sheetRow?{...p,price,mrp}:p);
+    selected={...selected,price,mrp};
+    showToast('✓ Sheet updated');
+  }catch(e){ showToast('Failed: '+e.message,'err'); }
+  btn.disabled=false; btn.textContent='SAVE TO SHEET';
+}
+
+function disconnect(){
+  db=[];selected=null;_headers=[];
+  document.getElementById('connected-bar').classList.add('hidden');
+  document.getElementById('search-input').disabled=true;
+  document.getElementById('search-input').placeholder='Disconnected — refresh page to reconnect';
+  document.getElementById('search-input').value='';
+  document.getElementById('product-card').classList.add('hidden');
+  setStatus('idle','Disconnected'); closeDropdown();
+}
+
+// ── SEARCH ──
+function onSearch(val){clearTimeout(searchTimer);if(!val.trim()){closeDropdown();return;}searchTimer=setTimeout(()=>doSearch(val.trim()),150);}
+
+function doSearch(q){
+  const ql=q.toLowerCase();
+  const res=db.filter(p=>(p.rawName&&p.rawName.toLowerCase().includes(ql))||(p.name&&p.name.toLowerCase().includes(ql))||(p.sku&&p.sku.toLowerCase().includes(ql))).slice(0,8);
+  const dd=document.getElementById('dropdown');
+  dd.innerHTML=res.length?res.map(p=>`
+    <div class="drop-item" onclick="pickProduct(${db.indexOf(p)})">
+      <div>
+        <div class="di-name">${p.name}${p.color?` <span style="color:var(--textD);font-size:12px;">— ${p.color}${p.size?' / '+p.size:''}</span>`:''}</div>
+        <div class="di-meta">${p.rawName}</div>
+      </div>
+      ${p.sku?`<span class="di-sku">${p.sku}</span>`:''}
+    </div>`).join(''):`<div class="drop-empty">No products found for "${q}"</div>`;
+  dd.classList.remove('hidden');
+}
+
+function closeDropdown(){document.getElementById('dropdown').classList.add('hidden');}
+document.addEventListener('click',e=>{if(!e.target.closest('#search-wrap'))closeDropdown();});
+
+function pickProduct(idx){
+  selected=db[idx]; closeDropdown();
+  document.getElementById('search-input').value=selected.rawName;
+  document.getElementById('c-name').textContent=selected.name||'—';
+  document.getElementById('c-sku').textContent=selected.sku||'—';
+  document.getElementById('c-color').textContent=selected.color||'—';
+  document.getElementById('c-size').textContent=selected.size||'—';
+  document.getElementById('e-mrp').value=selected.mrp||'';
+  document.getElementById('e-price').value=selected.price||'';
+  document.getElementById('e-dom').value=selected.dom||currentDOM();
+  document.getElementById('qty-input').value=1;
+  document.getElementById('product-card').classList.remove('hidden');
+}
+
+function changeQty(d){const i=document.getElementById('qty-input');i.value=Math.max(1,(parseInt(i.value)||1)+d);}
+
+// ── ADD TO LIST ──
+function addToList(){
+  if(!selected) return;
+  const qty=Math.max(1,parseInt(document.getElementById('qty-input').value)||1);
+  const price=document.getElementById('e-price').value;
+  const mrp=document.getElementById('e-mrp').value;
+  const dom=document.getElementById('e-dom').value||currentDOM();
+  labelRows.push({...selected,price,mrp,dom,qty,_rid:uid()});
+  renderTable();
+  showToast(`Added ${qty} × "${selected.name}"`);
+  document.getElementById('search-input').value='';
+  document.getElementById('product-card').classList.add('hidden');
+  selected=null;
+}
+
+// ── INLINE QTY EDIT IN TABLE ──
+function updateRowQty(rid, delta){
+  labelRows=labelRows.map(r=>r._rid===rid?{...r,qty:Math.max(1,(r.qty||1)+delta)}:r);
+  renderTable();
+}
+function setRowQty(rid, val){
+  const n=Math.max(1,parseInt(val)||1);
+  labelRows=labelRows.map(r=>r._rid===rid?{...r,qty:n}:r);
+  renderTable();
+}
+
+function removeRow(rid){labelRows=labelRows.filter(r=>r._rid!==rid);renderTable();}
+function clearAll(){if(!labelRows.length)return;if(confirm('Remove all rows?')){labelRows=[];renderTable();}}
+
+function totalQty(){return labelRows.reduce((s,r)=>s+(r.qty||1),0);}
+
+// ── RENDER TABLE ──
+function renderTable(){
+  const total=totalQty();
+  document.getElementById('row-count').textContent=`${labelRows.length} ITEM${labelRows.length!==1?'S':''} · ${total} LABEL${total!==1?'S':''}`;
+  document.getElementById('btn-export').disabled=!labelRows.length;
+  document.getElementById('btn-write-sheet').disabled=!labelRows.length;
+  const empty=document.getElementById('empty-state');
+  const wrap=document.getElementById('table-wrap');
+  if(!labelRows.length){empty.style.display='block';wrap.classList.add('hidden');return;}
+  empty.style.display='none'; wrap.classList.remove('hidden');
+  document.getElementById('table-body').innerHTML=labelRows.map((r,i)=>`
+    <tr>
+      <td class="td-num">${i+1}</td>
+      <td class="td-name">${r.name||'—'}</td>
+      <td class="td-sku">${r.sku||'—'}</td>
+      <td class="td-val">${r.color||'—'}</td>
+      <td class="td-val">${r.size||'—'}</td>
+      <td>
+        <div class="qty-edit-wrap">
+          <button class="qty-edit-btn" onclick="updateRowQty(${r._rid},-1)">−</button>
+          <input class="qty-edit-input" type="number" value="${r.qty||1}" min="1"
+            onchange="setRowQty(${r._rid},this.value)"
+            oninput="setRowQty(${r._rid},this.value)"/>
+          <button class="qty-edit-btn" onclick="updateRowQty(${r._rid},1)">+</button>
+        </div>
+      </td>
+      <td class="td-val">${r.mrp||'—'}</td>
+      <td class="td-price">${r.price||'—'}</td>
+      <td class="td-val">${r.dom||'—'}</td>
+      <td><button class="btn-del" onclick="removeRow(${r._rid})">✕</button></td>
+    </tr>`).join('');
+}
+
+// ── EXPORT CSV ──
+function exportCSV(){
+  if(!labelRows.length) return;
+  const headers=['Item Name','SKU','Colour','Size','Quantity','MRP','Price','Date of Manufacture'];
+  const cell=v=>`"${String(v||'').replace(/"/g,'""')}"`;
+  // Space-prefix the date: Excel won't auto-convert " MAY 2026" to a date
+  const dateCell=v=>`" ${String(v||'').replace(/"/g,'""')}"`;
+  const expanded=[];
+  for(const r of labelRows){ const n=r.qty||1; for(let i=0;i<n;i++) expanded.push(r); }
+  const csv=[headers.join(','),...expanded.map(r=>[
+    cell(r.name),
+    cell(r.sku),
+    cell(r.color),
+    cell(r.size),
+    1,
+    cell(cleanNumber(r.mrp)),
+    cell(cleanNumber(r.price)),
+    dateCell(r.dom)
+  ].join(','))].join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`labels_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  showToast(`✓ Exported ${expanded.length} label rows`);
+}
+
+// ── WRITE TO SEPARATE EXPORT SHEET (clear & overwrite) ──
+// Uses fetch POST — no URL length limit, no JSONP needed
+async function writeToSheet(){
+  if(!labelRows.length) return;
+  const btn=document.getElementById('btn-write-sheet');
+  btn.disabled=true; btn.textContent='⇪ WRITING…';
+  try{
+    const expanded=[];
+    for(const r of labelRows){ const n=r.qty||1; for(let i=0;i<n;i++) expanded.push(r); }
+    const rows=expanded.map(r=>[
+      r.name||'', r.sku||'', r.color||'', r.size||'',
+      1, cleanNumber(r.mrp), cleanNumber(r.price), r.dom||''
+    ]);
+
+    // POST via fetch with no-cors (Apps Script accepts POST)
+    // We use no-cors so we don't need CORS headers — we won't read the response body
+    // but Apps Script still processes and writes the data
+    await fetch(EXPORT_SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ action: 'write', data: JSON.stringify(rows) })
+    });
+
+    // With no-cors we can't read the response, so assume success after 2s
+    await new Promise(res => setTimeout(res, 2000));
+    showToast(`✓ Wrote ${rows.length} rows to Google Sheet`);
+  }catch(e){
+    showToast('Write failed: '+e.message,'err');
+  }
+  btn.disabled=false; btn.textContent='⇪ WRITE TO SHEET';
+}
+
+// ── INIT — auto-connect on load ──
+renderTable();
+loadSheet();
+</script>
+</body>
+</html>
